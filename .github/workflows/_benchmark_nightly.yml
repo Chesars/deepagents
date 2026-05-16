@@ -16,6 +16,7 @@ permissions:
 jobs:
   benchmark-deepagents:
     name: "⏱️ Benchmark deepagents"
+    if: github.repository == 'langchain-ai/deepagents'
     uses: ./.github/workflows/_benchmark.yml
     with:
       working-directory: "libs/deepagents"
@@ -23,6 +24,7 @@ jobs:
 
   benchmark-cli:
     name: "⏱️ Benchmark cli"
+    if: github.repository == 'langchain-ai/deepagents'
     uses: ./.github/workflows/_benchmark.yml
     with:
       working-directory: "libs/cli"
