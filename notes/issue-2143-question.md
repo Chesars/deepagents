@@ -2,25 +2,38 @@
 
 **Context**
 
-Issue #2143 proposes a `.deepagentsignore` file that applies gitignore-style exclusion rules
-to all file-reading tools (`read_file`, `@` mentions, directory listings).
-
-The existing architecture already separates `read` from `write` operations via
-`FilesystemPermission` rules (see `libs/deepagents/middleware/filesystem/`).
+Issue #2143 proposes a `.deepagentsignore` file (gitignore syntax) that tells
+the agent to ignore certain paths. The existing `FilesystemPermission` system
+already distinguishes `"read"` from `"write"` operations and enforces them at
+tool call time (`read_file`, `write_file`, `edit_file`, `glob`, `grep`, etc.).
 
 **Question**
 
-> Should `.deepagentsignore` be treated as **read-only to the agent itself** —
-> i.e., should the permissions system hard-block any `write_file` / `edit_file`
-> call that targets `.deepagentsignore` — or should the file remain editable
-> by the agent like any other project file?
+> When a path matches `.deepagentsignore`, should the agent:
+>
+> **(A) Not see it only** — `read_file`, `grep`, `glob`, `@` mentions are
+> blocked, but `write_file` / `edit_file` are still allowed?
+>
+> **(B) Neither see nor edit it** — all tool operations (`read` AND `write`)
+> are blocked for matching paths?
 
 **Why it matters**
 
-If the agent can overwrite its own ignore file it can silently remove its own
-access restrictions, which undermines the security boundary the feature is
-meant to create. Making it read-only to the agent (while still writable by the
-human via the shell) aligns with how `.gitignore` is treated by tools like
-Claude Code's `.claudeignore`.
+These serve two different user needs:
+
+- **"Not see"** is a *privacy / context guard* — keeps `.env`, credentials,
+  and large build artifacts out of the agent's context window.
+- **"Neither see nor edit"** is an *integrity guard* — prevents the agent from
+  touching lock files, generated artifacts, or config the user never wants
+  overwritten.
+
+Most users probably expect both blocked (option B), but the issue body only
+mentions file-reading tools. Clarifying this upfront avoids a confusing split
+implementation later.
+
+**Technically**, both options map cleanly to the existing `FilesystemPermission`
+rule system — option A generates `deny read` rules; option B generates
+`deny read + deny write` rules. The question is which semantic `.deepagentsignore`
+is meant to express.
 
 **Ref:** https://github.com/langchain-ai/deepagents/issues/2143
